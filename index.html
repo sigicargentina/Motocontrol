@@ -706,17 +706,16 @@
             <div class="health-label">Salud de la moto</div>
           </div>
         </div>
+        <div class="health-summary">
+          <h2>Estado general</h2>
+          <div class="status-line" id="saludEstado">Sin datos suficientes</div>
+          <div class="small" id="saludDetalle" style="color:#cbd5e1">Cargá kilometraje y services para calcular el índice.</div>
+        </div>
         <div class="annual-expense-card">
           <label for="anioGasto">Gasto anual</label>
           <select id="anioGasto" aria-label="Seleccionar año para gasto anual"></select>
           <div class="annual-expense-value" id="gastoAnualValor">$ --</div>
           <div class="annual-expense-caption" id="gastoAnualDetalle">Total de costos cargados en Service.</div>
-        </div>
-        <div class="health-summary">
-          <h2>Estado general</h2>
-          <div class="status-line" id="saludEstado">Sin datos suficientes</div>
-          <div class="small" id="saludDetalle" style="color:#cbd5e1">Cargá kilometraje y services para calcular el índice.</div>
-          <div class="health-list" id="saludMini"></div>
         </div>
       </section>
 
@@ -2096,8 +2095,7 @@
     const valor = $('saludValor');
     const estado = $('saludEstado');
     const detalle = $('saludDetalle');
-    const mini = $('saludMini');
-    if (!ring || !valor || !estado || !detalle || !mini) return;
+    if (!ring || !valor || !estado || !detalle) return;
 
     if (salud === null) {
       ring.style.setProperty('--health-angle', '0deg');
@@ -2105,7 +2103,6 @@
       valor.textContent = '--%';
       estado.textContent = 'Sin datos suficientes';
       detalle.textContent = 'Cargá el kilometraje actual y al menos un mantenimiento para calcular la salud de la moto.';
-      mini.innerHTML = '';
       return;
     }
 
@@ -2118,17 +2115,6 @@
     valor.textContent = salud + '%';
     estado.textContent = texto;
     detalle.textContent = vencidos ? `${vencidos} control(es) vencido(s). Conviene programar service.` : (proximos ? `${proximos} control(es) próximos al vencimiento.` : 'No hay mantenimientos críticos registrados.');
-
-    const ordenados = estados
-      .filter(e => e.ult)
-      .sort((a,b) => (saludItemPct(a) ?? 100) - (saludItemPct(b) ?? 100))
-      .slice(0,3);
-    mini.innerHTML = ordenados.map(e => {
-      const pct = saludItemPct(e);
-      const unidad = e.unidad === 'meses' ? 'meses' : 'km';
-      const textoResta = e.estado === 'VENCIDO' ? `Excedido ${Math.max(0, e.usados - parametros[e.tipo].vence).toLocaleString('es-AR')} ${unidad}` : `${e.restan.toLocaleString('es-AR')} ${unidad} restantes`;
-      return `<div class="health-mini"><span class="small" style="color:#cbd5e1">${e.tipo}</span><strong>${pct}%</strong><span class="small" style="color:#cbd5e1">${textoResta}</span></div>`;
-    }).join('');
   }
 
   function fechaLocalDesdeISO(iso) {
@@ -2163,7 +2149,6 @@
       if (!fecha || !km || tipo === 'Test de consumo') return;
       puntos.push({ fecha, km });
     });
-    if (kmActual) puntos.push({ fecha: new Date().toISOString().slice(0,10), km: kmActual });
     puntos.sort((a,b) => (a.fecha === b.fecha ? a.km - b.km : a.fecha.localeCompare(b.fecha)));
     const unicos = [];
     puntos.forEach(p => {
