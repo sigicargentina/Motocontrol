@@ -520,6 +520,13 @@
     .header-tools { display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
     .auth-help { width:100%; justify-content:center; margin-top:10px !important; background:#fff !important; color:#111827 !important; }
     .tips-box { margin-top:14px; padding:10px 12px; border-radius:16px; background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.14); color:#e5e7eb; font-size:13px; line-height:1.35; min-height:54px; }
+    .auth-loading { margin-top:14px; padding:10px 12px; border-radius:16px; background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.14); color:#e5e7eb; font-size:13px; display:flex; align-items:center; justify-content:center; gap:10px; }
+    .auth-loading.hidden { display:none; }
+    .auth-spinner { width:18px; height:18px; flex:0 0 auto; border-radius:50%; border:3px solid rgba(255,255,255,.25); border-top-color:#22c55e; animation: authSpin .8s linear infinite; }
+    @keyframes authSpin { to { transform: rotate(360deg); } }
+    .auth-card button:disabled { opacity:.6; cursor:not-allowed; }
+    .auth-whatsapp { display:block; text-align:center; margin-top:14px; color:#4ade80; font-size:13px; text-decoration:none; font-weight:bold; }
+    .auth-whatsapp:hover { text-decoration:underline; }
     .guide-modal { position:fixed; inset:0; z-index:160; display:none; align-items:center; justify-content:center; padding:18px; background:rgba(2,6,23,.72); backdrop-filter:blur(6px); }
     .guide-modal.show { display:flex; }
     .guide-card { width:min(560px,100%); max-height:92vh; overflow:auto; background:#fff; color:#111827; border-radius:28px; box-shadow:0 26px 90px rgba(0,0,0,.45); border:1px solid rgba(229,231,235,.95); padding:20px; }
@@ -610,10 +617,12 @@
       <button type="button" id="loginBtn">Ingresar</button>
       <button type="button" id="crearCuentaBtn" class="secondary">Crear cuenta</button>
       <button type="button" id="olvideClaveBtn" class="secondary">Olvidé mi contraseña</button>
-      <button type="button" id="authHelpBtn" class="help-btn auth-help"><img class="help-icon-img" alt="" /><span>Guía rápida</span></button>
-      <button type="button" id="authInstallBtn" class="secondary install-help">📱 Instalar como app</button>
-      <div id="loginTip" class="tips-box">💡 Consejo: cargá el kilometraje actual para que las alertas sean más precisas.</div>
+      <div id="authLoading" class="auth-loading hidden">
+        <div class="auth-spinner"></div>
+        <span id="authLoadingText">Conectando con la base de datos...</span>
+      </div>
       <div id="authMsg" class="auth-msg"></div>
+      <a href="https://wa.me/5491131856333?text=Hola%2C%20necesito%20ayuda%20con%20MotoControl" target="_blank" rel="noopener" class="auth-whatsapp">💬 ¿No podés entrar o querés suscribirte? Escribinos por WhatsApp</a>
     </section>
   </div>
   <header>
@@ -1417,22 +1426,13 @@
     if (usuarioSesion && !tutorialVisto()) setTimeout(() => abrirGuia(true), 450);
   }
 
-  const loginTips = [
-    '💡 Consejo: cargá el kilometraje actual para que las alertas sean más precisas.',
-    '💡 Consejo: registrá cada service apenas lo realices para mantener actualizada la Salud de la Moto.',
-    '💡 Consejo: cargá la capacidad del tanque para calcular mejor la autonomía.',
-    '💡 Consejo: la batería se controla por meses desde la fecha de cambio.',
-    '💡 Consejo: desde Inicio podés descargar un PDF del estado general.'
-  ];
-  let loginTipIndex = 0;
-  function iniciarConsejosLogin() {
-    const box = $('loginTip');
-    if (!box) return;
-    box.textContent = loginTips[0];
-    setInterval(() => {
-      loginTipIndex = (loginTipIndex + 1) % loginTips.length;
-      box.textContent = loginTips[loginTipIndex];
-    }, 6500);
+  function setAuthLoading(active, text) {
+    const box = $('authLoading');
+    if (box) box.classList.toggle('hidden', !active);
+    if (active && text && $('authLoadingText')) $('authLoadingText').textContent = text;
+    ['loginBtn', 'crearCuentaBtn', 'olvideClaveBtn'].forEach(id => { if ($(id)) $(id).disabled = active; });
+    if ($('loginDni')) $('loginDni').disabled = active;
+    if ($('loginClave')) $('loginClave').disabled = active;
   }
 
   async function loginUsuario(crear = false) {
@@ -1442,9 +1442,11 @@
       $('authMsg').textContent = 'Ingresá DNI y contraseña.';
       return;
     }
-    $('authMsg').textContent = crear ? 'Creando cuenta...' : 'Validando usuario...';
+    $('authMsg').textContent = '';
+    setAuthLoading(true, crear ? 'Creando cuenta...' : 'Conectando con la base de datos...');
     try {
       const json = await api(crear ? 'crearUsuario' : 'login', { dni, clave, device_id: getDeviceSessionId() });
+      setAuthLoading(true, 'Validando usuario...');
       const usuario = json.usuario || { usuario_id: json.usuario_id, nombre: json.nombre, dni, token: json.token || '', motos: json.motos || [], moto_id: json.moto_id || '', activo: json.activo || 'SI', pago_hasta: json.pago_hasta || '', plan: json.plan || (crear ? 'Prueba' : ''), dias_restantes: json.dias_restantes };
       guardarSesion(usuario);
       mostrarApp();
@@ -1453,6 +1455,8 @@
       revisarOnboarding();
     } catch (err) {
       $('authMsg').textContent = err.message || 'No se pudo iniciar sesión.';
+    } finally {
+      setAuthLoading(false);
     }
   }
 
@@ -2592,9 +2596,7 @@
   $('loginBtn')?.addEventListener('click', () => loginUsuario(false));
   $('crearCuentaBtn')?.addEventListener('click', () => loginUsuario(true));
   $('olvideClaveBtn')?.addEventListener('click', olvideClave);
-  $('authHelpBtn')?.addEventListener('click', () => abrirGuia(false));
   $('headerHelpBtn')?.addEventListener('click', () => abrirGuia(false));
-  $('authInstallBtn')?.addEventListener('click', abrirInstalarApp);
   $('headerInstallBtn')?.addEventListener('click', abrirInstalarApp);
   $('guideClose')?.addEventListener('click', cerrarGuia);
   $('guideNext')?.addEventListener('click', siguienteGuia);
@@ -2615,7 +2617,6 @@
     mostrarLogin('Sesión cerrada.');
   });
 
-  iniciarConsejosLogin();
   init();
 </script>
 </body>
