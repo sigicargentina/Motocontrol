@@ -2007,6 +2007,21 @@
     return Math.max(0, Math.min(100, Math.round(((vence - e.usados) / vence) * 100)));
   }
 
+  function saludItemPct(e) {
+    if (!e || !e.ult) return null;
+    const vence = Number(parametros[e.tipo]?.vence || 1);
+    if (!vence) return null;
+    if (e.usados >= vence) return 0;
+    const aviso = Number(parametros[e.tipo]?.aviso || 0);
+    if (aviso > 0 && e.usados >= aviso) {
+      const rango = vence - aviso;
+      if (rango <= 0) return 50;
+      const avance = (e.usados - aviso) / rango;
+      return Math.max(40, Math.round(100 - avance * 60));
+    }
+    return 100;
+  }
+
 
   function normalizarMonto(valor) {
     if (valor === null || valor === undefined || valor === '') return 0;
@@ -2075,7 +2090,7 @@
 
   function renderSaludMoto() {
     const estados = tiposBase.map(tipo => getEstado(tipo));
-    const porcentajes = estados.map(vidaRestantePct).filter(v => v !== null);
+    const porcentajes = estados.map(saludItemPct).filter(v => v !== null);
     const salud = porcentajes.length ? Math.round(porcentajes.reduce((a,b) => a + b, 0) / porcentajes.length) : null;
     const ring = $('saludRing');
     const valor = $('saludValor');
@@ -2106,10 +2121,10 @@
 
     const ordenados = estados
       .filter(e => e.ult)
-      .sort((a,b) => (vidaRestantePct(a) ?? 100) - (vidaRestantePct(b) ?? 100))
+      .sort((a,b) => (saludItemPct(a) ?? 100) - (saludItemPct(b) ?? 100))
       .slice(0,3);
     mini.innerHTML = ordenados.map(e => {
-      const pct = vidaRestantePct(e);
+      const pct = saludItemPct(e);
       const unidad = e.unidad === 'meses' ? 'meses' : 'km';
       const textoResta = e.estado === 'VENCIDO' ? `Excedido ${Math.max(0, e.usados - parametros[e.tipo].vence).toLocaleString('es-AR')} ${unidad}` : `${e.restan.toLocaleString('es-AR')} ${unidad} restantes`;
       return `<div class="health-mini"><span class="small" style="color:#cbd5e1">${e.tipo}</span><strong>${pct}%</strong><span class="small" style="color:#cbd5e1">${textoResta}</span></div>`;
