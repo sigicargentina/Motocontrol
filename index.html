@@ -2201,6 +2201,19 @@
       : `Sin costos cargados para ${anioGastoSeleccionado}.`;
   }
 
+  function nombreSalud(valor) {
+    if (valor >= 90) return 'Excelente';
+    if (valor >= 80) return 'Sobresaliente';
+    if (valor >= 70) return 'Muy bueno';
+    if (valor >= 60) return 'Bueno';
+    if (valor >= 50) return 'Aceptable';
+    if (valor >= 40) return 'Regular';
+    if (valor >= 30) return 'Atención';
+    if (valor >= 20) return 'Deficiente';
+    if (valor >= 10) return 'Crítico';
+    return 'Urgente';
+  }
+
   function renderSaludMoto() {
     const estados = tiposBase.map(tipo => getEstado(tipo));
     const porcentajes = estados.map(saludItemPct).filter(v => v !== null);
@@ -2221,7 +2234,7 @@
     }
 
     const color = salud >= 75 ? '#22c55e' : salud >= 45 ? '#f59e0b' : '#ef4444';
-    const texto = salud >= 75 ? 'Excelente estado' : salud >= 45 ? 'Revisar pronto' : 'Atención crítica';
+    const texto = nombreSalud(salud);
     const vencidos = estados.filter(e => e.estado === 'VENCIDO').length;
     const proximos = estados.filter(e => e.estado === 'PRÓXIMO').length;
     ring.style.setProperty('--health-angle', Math.round((salud / 100) * 360) + 'deg');
