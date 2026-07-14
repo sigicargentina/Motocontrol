@@ -864,7 +864,7 @@
           <div class="mini-card">
             <h3>Iniciar test</h3>
             <label for="autoKmInicio">Km con tanque lleno</label>
-            <input type="number" id="autoKmInicio" min="0" placeholder="Kilometraje actual" />
+            <input type="number" id="autoKmInicio" min="0" placeholder="Ej: 24500" />
             <button type="button" id="iniciarAutonomia">Iniciar nuevo test</button>
           </div>
           <div class="mini-card">
@@ -874,6 +874,7 @@
             <label for="autoLitros">Litros cargados</label>
             <input type="number" id="autoLitros" min="0" step="0.01" placeholder="Ej: 8.95" />
             <button type="button" id="cerrarAutonomia">Guardar resultado</button>
+            <button type="button" id="cancelarAutonomia" class="secondary hidden">✖️ Cancelar test</button>
           </div>
         </div>
       </section>
@@ -1296,7 +1297,7 @@
       await cargarDatos();
       setStatus('Moto creada y seleccionada.');
     } catch (err) {
-      alert(err.message || 'No se pudo crear la moto.');
+      mostrarAlerta(err.message || 'No se pudo crear la moto.', { titulo: 'No se pudo crear la moto', icono: '❌' });
       setStatus('Error: ' + err.message, true);
     }
   }
@@ -1355,6 +1356,35 @@
     modal.classList.add('show');
     modal.setAttribute('aria-hidden', 'false');
     if (auto) modal.dataset.auto = '1'; else delete modal.dataset.auto;
+  }
+
+  function mostrarAlerta(mensaje, opciones = {}) {
+    return new Promise((resolve) => {
+      const modal = $('confirmModal');
+      if (!modal) { alert(mensaje); resolve(); return; }
+      $('confirmTitle').textContent = opciones.titulo || 'Atención';
+      $('confirmIcon').textContent = opciones.icono || '⚠️';
+      $('confirmMessage').textContent = mensaje;
+      $('confirmOkBtn').textContent = opciones.textoOk || 'Entendido';
+      $('confirmCancelBtn').classList.add('hidden');
+      modal.classList.add('show');
+      modal.setAttribute('aria-hidden', 'false');
+
+      const cerrar = () => {
+        modal.classList.remove('show');
+        modal.setAttribute('aria-hidden', 'true');
+        $('confirmCancelBtn').classList.remove('hidden');
+        $('confirmOkBtn').removeEventListener('click', onOk);
+        $('confirmClose').removeEventListener('click', onOk);
+        modal.removeEventListener('click', onOverlay);
+        resolve();
+      };
+      const onOk = () => cerrar();
+      const onOverlay = (e) => { if (e.target === modal) cerrar(); };
+      $('confirmOkBtn').addEventListener('click', onOk);
+      $('confirmClose').addEventListener('click', onOk);
+      modal.addEventListener('click', onOverlay);
+    });
   }
 
   function mostrarConfirm(mensaje, opciones = {}) {
@@ -1535,16 +1565,16 @@
     if (!actual) return;
     const nueva = prompt('Ingresá la nueva contraseña');
     if (!nueva) return;
-    if (nueva.length < 4) { alert('La nueva contraseña debe tener al menos 4 caracteres.'); return; }
+    if (nueva.length < 4) { mostrarAlerta('La nueva contraseña debe tener al menos 4 caracteres.'); return; }
     const repetir = prompt('Repetí la nueva contraseña');
-    if (nueva !== repetir) { alert('Las contraseñas no coinciden.'); return; }
+    if (nueva !== repetir) { mostrarAlerta('Las contraseñas no coinciden.'); return; }
     setStatus('Actualizando contraseña...');
     try {
       await api('cambiarClave', { clave_actual: actual, clave_nueva: nueva });
-      alert('Contraseña actualizada correctamente.');
+      mostrarAlerta('Contraseña actualizada correctamente.', { titulo: 'Listo', icono: '✅', textoOk: 'Cerrar' });
       setStatus('Contraseña actualizada.');
     } catch (err) {
-      alert(err.message || 'No se pudo cambiar la contraseña.');
+      mostrarAlerta(err.message || 'No se pudo cambiar la contraseña.', { titulo: 'No se pudo cambiar', icono: '❌' });
       setStatus('Error: ' + err.message, true);
     }
   }
@@ -1716,7 +1746,7 @@
       $('motoMsg').textContent = 'Guardado en la base de datos: se mantiene aunque cambies de dispositivo o borres datos del navegador.';
       finishLoading('Datos de la moto guardados.');
     } catch (err) {
-      alert(err.message);
+      mostrarAlerta(err.message, { titulo: 'No se pudo guardar', icono: '❌' });
       setStatus('Error: ' + err.message, true);
       $('motoMsg').textContent = 'No se pudo guardar en la base de datos. Revisá la conexión e intentá de nuevo.';
       hideLoading();
@@ -1781,7 +1811,7 @@
 
   $('guardarKm').addEventListener('click', async () => {
     const nuevoKm = Number($('kmActual').value);
-    if (!nuevoKm || nuevoKm < 0) return alert('Ingresá un kilometraje actual válido.');
+    if (!nuevoKm || nuevoKm < 0) { mostrarAlerta('Ingresá un kilometraje actual válido.'); return; }
     const kmAnterior = kmActual;
     showLoading('Actualizando kilometraje', 'Sincronizando el kilometraje actual con la base de datos...');
     try {
@@ -1791,7 +1821,7 @@
       setStatus('Kilometraje actualizado.');
       finishLoading('Kilometraje actualizado.');
     } catch (err) {
-      alert(err.message);
+      mostrarAlerta(err.message, { titulo: 'No se pudo actualizar', icono: '❌' });
       setStatus('Error: ' + err.message, true);
       hideLoading();
     }
@@ -1849,7 +1879,7 @@
   $('guardarService').addEventListener('click', async () => {
     let payload;
     try { payload = datosFormularioService(); }
-    catch (err) { return alert(err.message); }
+    catch (err) { mostrarAlerta(err.message); return; }
 
     const editando = !!serviceEditandoId;
     showLoading(editando ? 'Actualizando service' : 'Guardando service', editando ? 'Actualizando el mantenimiento en la base de datos...' : 'Enviando el mantenimiento a la base de datos...');
@@ -1861,7 +1891,7 @@
       setStatus(editando ? 'Mantenimiento actualizado.' : 'Mantenimiento guardado.');
       finishLoading(editando ? 'Service actualizado.' : 'Service guardado.');
     } catch (err) {
-      alert(err.message);
+      mostrarAlerta(err.message, { titulo: 'No se pudo guardar', icono: '❌' });
       setStatus('Error: ' + err.message, true);
       hideLoading();
     }
@@ -1885,14 +1915,15 @@
       setStatus('Parámetros sincronizados.');
       finishLoading('Parámetros guardados.');
     } catch (err) {
-      alert(err.message);
+      mostrarAlerta(err.message, { titulo: 'No se pudo guardar', icono: '❌' });
       setStatus('Error: ' + err.message, true);
       hideLoading();
     }
   });
 
   $('borrarTodo').addEventListener('click', async () => {
-    if (!confirm('¿Seguro que querés borrar todo el historial y parámetros guardados?')) return;
+    const ok = await mostrarConfirm('Se van a borrar todos los registros y parámetros guardados de esta moto. Esta acción no se puede deshacer.', { titulo: '¿Borrar todo el historial?', icono: '🗑️', textoOk: 'Borrar todo' });
+    if (!ok) return;
     showLoading('Borrando historial', 'Eliminando los registros en la base de datos...');
     try {
       const data = await api('clearAll');
@@ -1900,7 +1931,7 @@
       setStatus('Historial borrado.');
       finishLoading('Historial borrado.');
     } catch (err) {
-      alert(err.message);
+      mostrarAlerta(err.message, { titulo: 'No se pudo borrar', icono: '❌' });
       setStatus('Error: ' + err.message, true);
       hideLoading();
     }
@@ -1939,21 +1970,34 @@
 
   $('iniciarAutonomia').addEventListener('click', () => {
     const kmInicio = Number($('autoKmInicio').value || $('kmActual').value);
-    if (!kmInicio || kmInicio < 0) return alert('Ingresá el kilometraje de inicio del test.');
+    if (!kmInicio || kmInicio < 0) { mostrarAlerta('Ingresá el kilometraje de inicio del test.', { titulo: 'Falta un dato' }); return; }
     const pendiente = { kmInicio, fechaInicio: new Date().toISOString().slice(0,10) };
     localStorage.setItem('moto_consumo_pendiente', JSON.stringify(pendiente));
     $('autoKmInicio').value = '';
     renderAutonomia();
   });
 
+  $('cancelarAutonomia')?.addEventListener('click', async () => {
+    const pendiente = getAutonomiaPendiente();
+    if (!pendiente) return;
+    const ok = await mostrarConfirm('Se va a descartar el test en curso sin guardar ningún resultado. Podés iniciar uno nuevo cuando quieras.', { titulo: '¿Cancelar el test en curso?', icono: '🛑', textoOk: 'Sí, cancelar', textoCancelar: 'Volver' });
+    if (!ok) return;
+    localStorage.removeItem('moto_consumo_pendiente');
+    $('autoKmFin').value = '';
+    $('autoLitros').value = '';
+    renderAutonomia();
+    setStatus('Test de consumo cancelado.');
+  });
+
   $('cerrarAutonomia').addEventListener('click', async () => {
     const pendiente = getAutonomiaPendiente();
-    if (!pendiente) return alert('Primero iniciá un test de consumo.');
+    if (!pendiente) { mostrarAlerta('Primero iniciá un test de consumo.', { titulo: 'No hay ningún test en curso' }); return; }
     const kmFin = Number($('autoKmFin').value);
     const litros = Number($('autoLitros').value);
     const tanque = Number(parametros._config?.capacidadTanque || 0);
-    if (!kmFin || kmFin <= pendiente.kmInicio) return alert('El km final debe ser mayor al km inicial.');
-    if (!litros || litros <= 0) return alert('Ingresá los litros cargados.');
+    if (!kmFin) { mostrarAlerta('Ingresá el kilometraje de cierre del test.', { titulo: 'Falta un dato' }); return; }
+    if (kmFin <= pendiente.kmInicio) { mostrarAlerta(`El km de cierre (${kmFin.toLocaleString('es-AR')}) tiene que ser mayor al km de inicio (${Number(pendiente.kmInicio).toLocaleString('es-AR')}).`, { titulo: 'El kilometraje no es válido' }); return; }
+    if (!litros || litros <= 0) { mostrarAlerta('Ingresá los litros cargados.', { titulo: 'Falta un dato' }); return; }
 
     const kmRecorridos = kmFin - pendiente.kmInicio;
     const kmLitro = kmRecorridos / litros;
@@ -1989,7 +2033,7 @@
       setStatus('Test de consumo guardado.');
       finishLoading('Test de consumo guardado.');
     } catch (err) {
-      alert(err.message);
+      mostrarAlerta(err.message, { titulo: 'No se pudo guardar', icono: '❌' });
       setStatus('Error: ' + err.message, true);
       hideLoading();
     }
@@ -2506,7 +2550,7 @@
     document.querySelectorAll('[data-edit-id]').forEach(btn => {
       btn.addEventListener('click', () => {
         const reg = servicios.find(x => String(x.id) === String(btn.dataset.editId));
-        if (!reg) return alert('No se encontró el registro para editar.');
+        if (!reg) { mostrarAlerta('No se encontró el registro para editar.'); return; }
         serviceEditandoId = reg.id;
         $('fecha').value = fechaISOlocal(reg.fecha);
         $('kmService').value = Number(reg.km || 0);
@@ -2531,7 +2575,8 @@
 
     document.querySelectorAll('[data-delete-id]').forEach(btn => {
       btn.addEventListener('click', async () => {
-        if (!confirm('¿Borrar este registro?')) return;
+        const ok = await mostrarConfirm('Esta acción no se puede deshacer.', { titulo: '¿Borrar este registro?', icono: '🗑️', textoOk: 'Borrar' });
+        if (!ok) return;
         showLoading('Borrando registro', 'Quitando el registro del historial...');
         try {
           const data = await api('deleteService', { id: btn.dataset.deleteId });
@@ -2540,7 +2585,7 @@
           setStatus('Registro borrado.');
           finishLoading('Registro borrado.');
         } catch (err) {
-          alert(err.message);
+          mostrarAlerta(err.message, { titulo: 'No se pudo borrar', icono: '❌' });
           setStatus('Error: ' + err.message, true);
           hideLoading();
         }
@@ -2568,6 +2613,7 @@
     const instFull = $('testInstructivoFull');
     const instCompact = $('testInstructivoCompact');
     const manito = $('manitoCerrar');
+    const btnCancelar = $('cancelarAutonomia');
     if (pendiente) {
       boxPendiente.classList.remove('hidden');
       const dias = Math.max(0, diasEntreFechas(pendiente.fechaInicio, new Date().toISOString().slice(0,10)));
@@ -2582,16 +2628,14 @@
       instFull?.classList.add('hidden');
       instCompact?.classList.remove('hidden');
       manito?.classList.remove('hidden');
+      btnCancelar?.classList.remove('hidden');
     } else {
       boxPendiente.classList.add('hidden');
       boxPendiente.innerHTML = '';
       instFull?.classList.remove('hidden');
       instCompact?.classList.add('hidden');
       manito?.classList.add('hidden');
-      const kmInicioInput = $('autoKmInicio');
-      if (kmInicioInput && document.activeElement !== kmInicioInput && kmActual) {
-        kmInicioInput.value = kmActual;
-      }
+      btnCancelar?.classList.add('hidden');
     }
 
     const ultimo = ultimoTestAutonomia();
@@ -2718,8 +2762,9 @@
   $('agregarMotoHeader')?.addEventListener('click', crearMotoNueva);
   $('agregarMotoConfig')?.addEventListener('click', crearMotoNueva);
   $('cambiarClaveBtn')?.addEventListener('click', cambiarClave);
-  $('cerrarSesion')?.addEventListener('click', () => {
-    if (!confirm('¿Cerrar sesión en este dispositivo?')) return;
+  $('cerrarSesion')?.addEventListener('click', async () => {
+    const ok = await mostrarConfirm('Vas a tener que ingresar tu DNI y contraseña de nuevo la próxima vez.', { titulo: '¿Cerrar sesión en este dispositivo?', icono: '🔒', textoOk: 'Cerrar sesión' });
+    if (!ok) return;
     borrarSesion();
     mostrarLogin('Sesión cerrada.');
   });
