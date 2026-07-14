@@ -864,7 +864,7 @@
           <div class="mini-card">
             <h3>Iniciar test</h3>
             <label for="autoKmInicio">Km con tanque lleno</label>
-            <input type="number" id="autoKmInicio" min="0" placeholder="Ej: 24500" />
+            <input type="number" id="autoKmInicio" min="0" placeholder="Kilometraje actual" />
             <button type="button" id="iniciarAutonomia">Iniciar nuevo test</button>
           </div>
           <div class="mini-card">
@@ -2588,6 +2588,10 @@
       instFull?.classList.remove('hidden');
       instCompact?.classList.add('hidden');
       manito?.classList.add('hidden');
+      const kmInicioInput = $('autoKmInicio');
+      if (kmInicioInput && document.activeElement !== kmInicioInput && kmActual) {
+        kmInicioInput.value = kmActual;
+      }
     }
 
     const ultimo = ultimoTestAutonomia();
