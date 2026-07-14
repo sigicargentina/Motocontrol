@@ -546,6 +546,8 @@
     .guide-actions { display:flex; gap:10px; margin-top:16px; }
     .guide-actions button { flex:1; }
     .guide-actions .secondary { background:#e5e7eb; color:#111827; }
+    .confirm-icon { width:44px; height:44px; border-radius:14px; background:#fef3c7; display:flex; align-items:center; justify-content:center; font-size:22px; flex:0 0 auto; }
+    .confirm-card #confirmMessage { color:#374151; font-size:14px; line-height:1.5; padding:2px 0 4px; }
     .guide-badge { display:inline-block; padding:5px 10px; border-radius:999px; background:#eef2ff; color:#3730a3; font-size:12px; font-weight:800; margin-bottom:10px; }
     @media (max-width:650px) { .header-tools { width:100%; justify-content:space-between; } .help-btn .help-label { display:none; } .guide-card { border-radius:22px; padding:16px; } .guide-step { min-height:280px; } }
 
@@ -985,6 +987,25 @@
     </section>
   </div>
 
+  <div id="confirmModal" class="guide-modal confirm-modal" aria-hidden="true" role="dialog" aria-modal="true">
+    <section class="guide-card confirm-card">
+      <div class="guide-head">
+        <div class="guide-title-wrap">
+          <div class="confirm-icon" id="confirmIcon">⚠️</div>
+          <div>
+            <h2 class="guide-title" id="confirmTitle">Confirmar</h2>
+          </div>
+        </div>
+        <button type="button" id="confirmClose" class="guide-close" aria-label="Cerrar">×</button>
+      </div>
+      <div class="guide-step" id="confirmMessage" style="min-height:auto"></div>
+      <div class="guide-actions">
+        <button type="button" id="confirmCancelBtn" class="secondary">Cancelar</button>
+        <button type="button" id="confirmOkBtn">Confirmar</button>
+      </div>
+    </section>
+  </div>
+
   <section id="maintenancePdfReport" class="maintenance-pdf-report" aria-hidden="true"></section>
 
 
@@ -1319,6 +1340,37 @@
     modal.classList.add('show');
     modal.setAttribute('aria-hidden', 'false');
     if (auto) modal.dataset.auto = '1'; else delete modal.dataset.auto;
+  }
+
+  function mostrarConfirm(mensaje, opciones = {}) {
+    return new Promise((resolve) => {
+      const modal = $('confirmModal');
+      if (!modal) { resolve(confirm(mensaje)); return; }
+      $('confirmTitle').textContent = opciones.titulo || 'Confirmar';
+      $('confirmIcon').textContent = opciones.icono || '⚠️';
+      $('confirmMessage').textContent = mensaje;
+      $('confirmOkBtn').textContent = opciones.textoOk || 'Confirmar';
+      $('confirmCancelBtn').textContent = opciones.textoCancelar || 'Cancelar';
+      modal.classList.add('show');
+      modal.setAttribute('aria-hidden', 'false');
+
+      const cerrar = (resultado) => {
+        modal.classList.remove('show');
+        modal.setAttribute('aria-hidden', 'true');
+        $('confirmOkBtn').removeEventListener('click', onOk);
+        $('confirmCancelBtn').removeEventListener('click', onCancel);
+        $('confirmClose').removeEventListener('click', onCancel);
+        modal.removeEventListener('click', onOverlay);
+        resolve(resultado);
+      };
+      const onOk = () => cerrar(true);
+      const onCancel = () => cerrar(false);
+      const onOverlay = (e) => { if (e.target === modal) cerrar(false); };
+      $('confirmOkBtn').addEventListener('click', onOk);
+      $('confirmCancelBtn').addEventListener('click', onCancel);
+      $('confirmClose').addEventListener('click', onCancel);
+      modal.addEventListener('click', onOverlay);
+    });
   }
 
   function cerrarGuia() {
@@ -2183,8 +2235,12 @@
     return unicos;
   }
 
-  function reiniciarPrediccionUso() {
-    if (!confirm('¿Reiniciar el cálculo de km mensuales? A partir de ahora se va a calcular con datos nuevos, sin usar el historial anterior. No se borra ningún service ni test de consumo.')) return;
+  async function reiniciarPrediccionUso() {
+    const ok = await mostrarConfirm(
+      'A partir de ahora se va a calcular con datos nuevos, sin usar el historial anterior. No se borra ningún service ni test de consumo.',
+      { titulo: '¿Reiniciar el cálculo de km mensuales?', icono: '🔄', textoOk: 'Reiniciar', textoCancelar: 'Cancelar' }
+    );
+    if (!ok) return;
     try {
       localStorage.removeItem('moto_km_historial_' + (motoActualId || 'default'));
       localStorage.setItem(anclaPrediccionKey(), JSON.stringify({ fecha: new Date().toISOString().slice(0,10), km: kmActual }));
