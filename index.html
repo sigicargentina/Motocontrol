@@ -2226,19 +2226,15 @@
     return { texto: 'Uso intensivo', cls: 'pill-bad' };
   }
 
-  function calcularPrediccionMantenimiento(tipo, uso) {
+  function textoProximoService(tipo, uso) {
     const e = getEstado(tipo);
-    if (!e || !e.ult) return null;
-    if (e.unidad === 'meses') {
-      const restante = Math.max(0, Number(e.restan || 0));
-      const fechaEstimada = sumarMeses(e.ult.fecha, restante);
-      return { tipo, estado: e.estado, cls: e.cls, detalle1: `${restante.toLocaleString('es-AR')} meses restantes`, detalle2: `Fecha estimada: ${fechaEstimada.toLocaleDateString('es-AR')}` };
-    }
-    if (!uso || !uso.kmMes || !kmActual) return null;
+    if (!e || e.unidad !== 'km') return null;
+    if (!e.ult) return 'Cargá un service para estimarlo';
+    if (e.estado === 'VENCIDO') return 'Vencido';
+    if (!uso || !uso.kmMes || !kmActual) return 'Sin datos de uso suficientes';
     const kmRestantes = Math.max(0, Number(e.restan || 0));
     const meses = kmRestantes / uso.kmMes;
-    const fechaEstimada = sumarMeses(new Date().toISOString().slice(0,10), meses);
-    return { tipo, estado: e.estado, cls: e.cls, detalle1: `${kmRestantes.toLocaleString('es-AR')} km restantes`, detalle2: `≈ ${meses.toFixed(1).replace('.', ',')} meses · ${fechaEstimada.toLocaleDateString('es-AR')}` };
+    return `≈ ${meses.toFixed(1).replace('.', ',')} meses`;
   }
 
   function renderPredicciones() {
@@ -2247,7 +2243,7 @@
     const uso = calcularUsoMensual();
     const ultimoConsumo = ultimoTestAutonomia();
     if (!uso) {
-      box.innerHTML = 'Cargá al menos dos registros con fecha y kilometraje para calcular km mensuales, litros estimados y próximos mantenimientos.';
+      box.innerHTML = 'Cargá al menos dos registros con fecha y kilometraje para calcular km mensuales y litros estimados.';
       return;
     }
     const intensidad = estadoUso(uso.kmMes);
@@ -2256,10 +2252,6 @@
     const litrosMes = kmLitro ? uso.kmMes / kmLitro : null;
     const litrosAnio = litrosMes ? litrosMes * 12 : null;
     const tanquesMes = litrosMes && tanque ? litrosMes / tanque : null;
-    const predMantenimientos = tiposBase
-      .map(tipo => calcularPrediccionMantenimiento(tipo, uso))
-      .filter(Boolean)
-      .slice(0, 7);
 
     box.innerHTML = `
       <div class="prediction-grid">
@@ -2277,18 +2269,6 @@
             <div class="prediction-metric"><span>Litros por año</span><strong>${litrosAnio.toFixed(0).toLocaleString('es-AR')} l</strong></div>
             <div class="prediction-metric"><span>Tanques por mes</span><strong>${tanquesMes ? tanquesMes.toFixed(1).replace('.', ',') : '-'}</strong></div>
           ` : `<div class="small">Cerrá un test de consumo para estimar litros mensuales y anuales.</div>`}
-        </div>
-      </div>
-      <div style="margin-top:14px">
-        <h3>🔧 Próximos mantenimientos</h3>
-        <div class="prediction-maint-list">
-          ${predMantenimientos.length ? predMantenimientos.map(p => `
-            <div class="prediction-maint">
-              <div class="prediction-maint-head"><span>${p.tipo}</span><span class="pill ${p.cls}">${p.estado}</span></div>
-              <small>${p.detalle1}</small>
-              <small>${p.detalle2}</small>
-            </div>
-          `).join('') : '<div class="small">Cargá services para calcular próximos mantenimientos.</div>'}
         </div>
       </div>`;
   }
@@ -2341,6 +2321,7 @@
     renderGastoAnual();
     renderPredicciones();
 
+    const usoPred = calcularUsoMensual();
     $('tarjetasEstado').innerHTML = tiposBase.map(tipo => {
       const e = getEstado(tipo);
       const angle = Math.min(180, Math.round((e.pct / 100) * 180));
@@ -2348,6 +2329,7 @@
       const ultimoTexto = e.ult ? (e.unidad === 'meses' ? `Último cambio: ${formatearFecha(e.ult.fecha)}` : `Último service: ${Number(e.ult.km).toLocaleString('es-AR')} km`) : 'Todavía no hay service cargado.';
       const restanTexto = e.estado === 'VENCIDO' ? `Excedido por ${(e.usados - parametros[tipo].vence).toLocaleString('es-AR')} ${unidad}` : `Restan ${e.restan.toLocaleString('es-AR')} ${unidad}`;
       if (tipo === 'Batería') return renderBateriaCard(e, ultimoTexto, restanTexto);
+      const proximoTexto = textoProximoService(tipo, usoPred);
       return `
         <article class="service-card ${e.estado === 'VENCIDO' ? 'vencido' : ''}">
           <div class="service-top">
@@ -2367,6 +2349,7 @@
             <div class="metric">${restanTexto}</div>
             <div class="small">Usados: ${e.usados.toLocaleString('es-AR')} ${unidad}</div>
             <div class="small">${ultimoTexto}</div>
+            ${proximoTexto ? `<div class="small">Próximo service: ${proximoTexto}</div>` : ''}
           </div>
         </article>`;
     }).join('');
