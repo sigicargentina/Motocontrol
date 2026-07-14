@@ -557,6 +557,9 @@
     .guide-actions { display:flex; gap:10px; margin-top:16px; }
     .guide-actions button { flex:1; }
     .guide-actions .secondary { background:#e5e7eb; color:#111827; }
+    .modo-prediccion-tabs { display:flex; gap:8px; margin:12px 0; }
+    .modo-tab { flex:1; padding:9px 10px; border-radius:14px; border:1px solid var(--border); background:#f3f4f6; color:#374151; font-weight:700; font-size:13px; cursor:pointer; }
+    .modo-tab.active { background:#111827; color:#fff; border-color:#111827; }
     .confirm-icon { width:44px; height:44px; border-radius:14px; background:#fef3c7; display:flex; align-items:center; justify-content:center; font-size:22px; flex:0 0 auto; }
     .confirm-card #confirmMessage { color:#374151; font-size:14px; line-height:1.5; padding:2px 0 4px; }
     .guide-badge { display:inline-block; padding:5px 10px; border-radius:999px; background:#eef2ff; color:#3730a3; font-size:12px; font-weight:800; margin-bottom:10px; }
@@ -736,6 +739,16 @@
         <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
           <h2 style="margin:0;">🔮 Predicciones</h2>
           <button type="button" id="reiniciarPrediccionBtn" class="secondary" style="width:auto; padding:8px 14px; font-size:13px;">🔄 Reiniciar cálculo</button>
+        </div>
+        <div class="modo-prediccion-tabs">
+          <button type="button" id="modoPrediccionAuto" class="modo-tab active">🤖 Automático</button>
+          <button type="button" id="modoPrediccionManual" class="modo-tab">✍️ Manual</button>
+        </div>
+        <div id="prediccionManualBox" class="mini-card hidden" style="margin-bottom:12px">
+          <label for="kmSemanaManual">Km recorridos esta semana</label>
+          <input type="number" id="kmSemanaManual" min="0" placeholder="Ej: 250" />
+          <button type="button" id="guardarKmSemanaBtn">Guardar</button>
+          <div id="prediccionManualInfo" class="small" style="margin-top:6px; color:#6b7280">Todavía no cargaste ningún dato.</div>
         </div>
         <div id="prediccionesContenido" class="small">Cargá al menos dos registros con fecha y kilometraje para calcular predicciones.</div>
       </section>
@@ -2321,6 +2334,40 @@
     setStatus('Cálculo de km mensuales reiniciado.');
   }
 
+  function prediccionModoKey() {
+    return 'moto_prediccion_modo_' + (motoActualId || 'default');
+  }
+
+  function obtenerPrediccionModo() {
+    try { return localStorage.getItem(prediccionModoKey()) || 'auto'; } catch(e) { return 'auto'; }
+  }
+
+  function guardarPrediccionModo(modo) {
+    try { localStorage.setItem(prediccionModoKey(), modo); } catch(e) {}
+  }
+
+  function prediccionManualKey() {
+    return 'moto_prediccion_manual_' + (motoActualId || 'default');
+  }
+
+  function obtenerPrediccionManual() {
+    try { return JSON.parse(localStorage.getItem(prediccionManualKey()) || 'null'); } catch(e) { return null; }
+  }
+
+  function guardarPrediccionManual(kmSemana) {
+    try { localStorage.setItem(prediccionManualKey(), JSON.stringify({ kmSemana, fecha: new Date().toISOString().slice(0,10) })); } catch(e) {}
+  }
+
+  function calcularUso() {
+    if (obtenerPrediccionModo() === 'manual') {
+      const manual = obtenerPrediccionManual();
+      if (!manual || !manual.kmSemana) return null;
+      const kmMes = manual.kmSemana * 4.348;
+      return { diffKm: manual.kmSemana, dias: 7, kmMes, kmAnio: kmMes * 12, manual: true };
+    }
+    return calcularUsoMensual();
+  }
+
   function calcularUsoMensual() {
     const puntos = obtenerPuntosKm().filter(p => p.km > 0);
     if (puntos.length < 2) return null;
@@ -2365,13 +2412,38 @@
     return `≈ ${meses.toFixed(1).replace('.', ',')} meses`;
   }
 
+  function renderModoPrediccion() {
+    const modo = obtenerPrediccionModo();
+    const btnAuto = $('modoPrediccionAuto');
+    const btnManual = $('modoPrediccionManual');
+    const boxManual = $('prediccionManualBox');
+    const btnReiniciar = $('reiniciarPrediccionBtn');
+    if (!btnAuto || !btnManual || !boxManual) return;
+    btnAuto.classList.toggle('active', modo === 'auto');
+    btnManual.classList.toggle('active', modo === 'manual');
+    boxManual.classList.toggle('hidden', modo !== 'manual');
+    btnReiniciar?.classList.toggle('hidden', modo === 'manual');
+    if (modo === 'manual') {
+      const manual = obtenerPrediccionManual();
+      const input = $('kmSemanaManual');
+      if (input && document.activeElement !== input) {
+        input.value = manual ? manual.kmSemana : '';
+      }
+      const info = $('prediccionManualInfo');
+      if (info) info.textContent = manual ? `Último dato cargado: ${manual.fecha}` : 'Todavía no cargaste ningún dato.';
+    }
+  }
+
   function renderPredicciones() {
     const box = $('prediccionesContenido');
     if (!box) return;
-    const uso = calcularUsoMensual();
+    renderModoPrediccion();
+    const uso = calcularUso();
     const ultimoConsumo = ultimoTestAutonomia();
     if (!uso) {
-      box.innerHTML = 'Cargá al menos dos registros con fecha y kilometraje para calcular km mensuales y litros estimados.';
+      box.innerHTML = obtenerPrediccionModo() === 'manual'
+        ? 'Cargá los km que recorriste esta semana para calcular km mensuales y litros estimados.'
+        : 'Cargá al menos dos registros con fecha y kilometraje para calcular km mensuales y litros estimados.';
       return;
     }
     const intensidad = estadoUso(uso.kmMes);
@@ -2380,6 +2452,9 @@
     const litrosMes = kmLitro ? uso.kmMes / kmLitro : null;
     const litrosAnio = litrosMes ? litrosMes * 12 : null;
     const tanquesMes = litrosMes && tanque ? litrosMes / tanque : null;
+    const baseTexto = uso.manual
+      ? `Base: ${uso.diffKm.toLocaleString('es-AR')} km cargados manualmente para esta semana.`
+      : `Base: ${uso.diffKm.toLocaleString('es-AR')} km en ${uso.dias} días.`;
 
     box.innerHTML = `
       <div class="prediction-grid">
@@ -2388,7 +2463,7 @@
           <div class="prediction-metric"><span>Promedio mensual</span><strong>${Math.round(uso.kmMes).toLocaleString('es-AR')} km</strong></div>
           <div class="prediction-metric"><span>Promedio anual</span><strong>${Math.round(uso.kmAnio).toLocaleString('es-AR')} km</strong></div>
           <div style="margin-top:10px"><span class="pill ${intensidad.cls}">${intensidad.texto}</span></div>
-          <div class="small" style="margin-top:8px">Base: ${uso.diffKm.toLocaleString('es-AR')} km en ${uso.dias} días.</div>
+          <div class="small" style="margin-top:8px">${baseTexto}</div>
         </div>
         <div class="prediction-block">
           <div class="prediction-block-title">⛽ Combustible estimado</div>
@@ -2449,7 +2524,7 @@
     renderGastoAnual();
     renderPredicciones();
 
-    const usoPred = calcularUsoMensual();
+    const usoPred = calcularUso();
     $('tarjetasEstado').innerHTML = tiposBase.map(tipo => {
       const e = getEstado(tipo);
       const angle = Math.min(180, Math.round((e.pct / 100) * 180));
@@ -2761,6 +2836,15 @@
   $('olvideClaveBtn')?.addEventListener('click', olvideClave);
   $('headerHelpBtn')?.addEventListener('click', () => abrirGuia(false));
   $('reiniciarPrediccionBtn')?.addEventListener('click', reiniciarPrediccionUso);
+  $('modoPrediccionAuto')?.addEventListener('click', () => { guardarPrediccionModo('auto'); renderPredicciones(); });
+  $('modoPrediccionManual')?.addEventListener('click', () => { guardarPrediccionModo('manual'); renderPredicciones(); });
+  $('guardarKmSemanaBtn')?.addEventListener('click', () => {
+    const km = Number($('kmSemanaManual').value);
+    if (!km || km < 0) { mostrarAlerta('Ingresá los km recorridos esta semana.', { titulo: 'Falta un dato' }); return; }
+    guardarPrediccionManual(km);
+    renderPredicciones();
+    setStatus('Km semanales actualizados.');
+  });
   $('headerInstallBtn')?.addEventListener('click', abrirInstalarApp);
   $('guideClose')?.addEventListener('click', cerrarGuia);
   $('guideNext')?.addEventListener('click', siguienteGuia);
