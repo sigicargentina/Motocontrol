@@ -720,7 +720,10 @@
       </section>
 
       <section class="card predictions-card" id="prediccionesCard">
-        <h2>🔮 Predicciones</h2>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+          <h2 style="margin:0;">🔮 Predicciones</h2>
+          <button type="button" id="reiniciarPrediccionBtn" class="secondary" style="width:auto; padding:8px 14px; font-size:13px;">🔄 Reiniciar cálculo</button>
+        </div>
         <div id="prediccionesContenido" class="small">Cargá al menos dos registros con fecha y kilometraje para calcular predicciones.</div>
       </section>
 
@@ -2136,6 +2139,18 @@
     return r;
   }
 
+  function anclaPrediccionKey() {
+    return 'moto_prediccion_ancla_' + (motoActualId || 'default');
+  }
+
+  function obtenerAnclaPrediccion() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(anclaPrediccionKey()) || 'null');
+      if (raw && raw.fecha) return { fecha: fechaISOlocal(raw.fecha), km: Number(raw.km || 0) };
+    } catch(e) {}
+    return null;
+  }
+
   function obtenerPuntosKm() {
     const puntos = [];
     try {
@@ -2149,9 +2164,15 @@
       if (!fecha || !km || tipo === 'Test de consumo') return;
       puntos.push({ fecha, km });
     });
-    puntos.sort((a,b) => (a.fecha === b.fecha ? a.km - b.km : a.fecha.localeCompare(b.fecha)));
+    const ancla = obtenerAnclaPrediccion();
+    let base = puntos;
+    if (ancla) {
+      base = puntos.filter(p => p.fecha >= ancla.fecha);
+      base.push({ fecha: ancla.fecha, km: ancla.km });
+    }
+    base.sort((a,b) => (a.fecha === b.fecha ? a.km - b.km : a.fecha.localeCompare(b.fecha)));
     const unicos = [];
-    puntos.forEach(p => {
+    base.forEach(p => {
       const prev = unicos[unicos.length - 1];
       if (prev && prev.fecha === p.fecha) {
         if (p.km > prev.km) prev.km = p.km;
@@ -2160,6 +2181,16 @@
       }
     });
     return unicos;
+  }
+
+  function reiniciarPrediccionUso() {
+    if (!confirm('¿Reiniciar el cálculo de km mensuales? A partir de ahora se va a calcular con datos nuevos, sin usar el historial anterior. No se borra ningún service ni test de consumo.')) return;
+    try {
+      localStorage.removeItem('moto_km_historial_' + (motoActualId || 'default'));
+      localStorage.setItem(anclaPrediccionKey(), JSON.stringify({ fecha: new Date().toISOString().slice(0,10), km: kmActual }));
+    } catch(e) {}
+    renderPredicciones();
+    setStatus('Cálculo de km mensuales reiniciado.');
   }
 
   function calcularUsoMensual() {
@@ -2597,6 +2628,7 @@
   $('crearCuentaBtn')?.addEventListener('click', () => loginUsuario(true));
   $('olvideClaveBtn')?.addEventListener('click', olvideClave);
   $('headerHelpBtn')?.addEventListener('click', () => abrirGuia(false));
+  $('reiniciarPrediccionBtn')?.addEventListener('click', reiniciarPrediccionUso);
   $('headerInstallBtn')?.addEventListener('click', abrirInstalarApp);
   $('guideClose')?.addEventListener('click', cerrarGuia);
   $('guideNext')?.addEventListener('click', siguienteGuia);
