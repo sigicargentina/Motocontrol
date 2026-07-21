@@ -81,7 +81,7 @@
     .table-wrap { overflow-x: auto; }
     .actions { display: flex; gap: 8px; margin-top: 10px; }
     .actions button { flex: 1; }
-    .bottom-nav { position: fixed; left: 0; right: 0; bottom: 0; background: white; border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(4, 1fr); z-index: 20; box-shadow: 0 -5px 20px rgba(0,0,0,.08); }
+    .bottom-nav { position: fixed; left: 0; right: 0; bottom: 0; background: white; border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(6, 1fr); z-index: 20; box-shadow: 0 -5px 20px rgba(0,0,0,.08); }
     .nav-btn { border: none; background: white; color: #6b7280; padding: 9px 4px 8px; border-radius: 0; margin: 0; font-size: 12px; }
     .nav-btn span { display: block; font-size: 20px; margin-bottom: 2px; }
     .nav-btn.active { color: #111827; background: #f9fafb; }
@@ -208,7 +208,7 @@
       box-shadow: 0 0 22px rgba(20,184,166,.18);
     }
     .bottom-nav {
-      width: min(560px, calc(100% - 24px));
+      width: min(680px, calc(100% - 24px));
       left: 50%; right: auto; bottom: 12px;
       transform: translateX(-50%);
       border-radius: 24px;
@@ -353,10 +353,10 @@
 
     /* La navegación superior copia el criterio visual de la navegación inferior */
     header .top-nav {
-      width: min(560px, 100%);
+      width: min(680px, 100%);
       margin: 14px auto 0;
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(6, 1fr);
       gap: 0;
       overflow: hidden;
       border-radius: 24px;
@@ -396,7 +396,7 @@
 
     @page { size: A4 portrait; margin: 8mm; }
     @media print {
-      header, .bottom-nav, #pageMantenimiento, #pageAutonomia, #pageConfig, .pdf-home-btn, .loading-overlay, .hero button, .hero label, .hero input { display: none !important; }
+      header, .bottom-nav, #pageMantenimiento, #pageAutonomia, #pagePredicciones, #pagePlan, #pageConfig, .pdf-home-btn, .loading-overlay, .hero button, .hero label, .hero input { display: none !important; }
       html, body { width: 210mm; height: 297mm; background: #ffffff !important; padding: 0 !important; margin: 0 !important; overflow: hidden !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       body { font-size: 10px !important; }
       main { max-width: none !important; padding: 0 !important; margin: 0 !important; }
@@ -611,19 +611,10 @@
     @media(max-width:650px){.plan-status-card{grid-template-columns:1fr}.plan-countdown{font-size:32px}.whatsapp-plan-btn{width:100%}}
 
     /* V23 - Chip compacto de plan en Inicio */
-    .plan-chip-bar { display:flex; justify-content:flex-end; margin:-2px 0 14px; }
-    .plan-chip { display:inline-flex; align-items:center; gap:6px; padding:7px 13px; border-radius:999px; background:#d1fae5; color:#065f46; font-weight:800; font-size:13px; border:1px solid rgba(6,95,70,.15); cursor:pointer; }
+    .plan-chip { display:block; margin-top:5px; padding:4px 8px; border-radius:999px; background:#d1fae5; color:#065f46; font-weight:800; font-size:11px; border:1px solid rgba(6,95,70,.15); cursor:pointer; white-space:nowrap; text-align:center; }
     .plan-chip:hover { filter:brightness(.97); }
     .plan-chip.warn { background:#fef3c7; color:#92400e; }
     .plan-chip.bad { background:#fee2e2; color:#991b1b; }
-    @media(max-width:650px){ .plan-chip-bar{ justify-content:stretch; } .plan-chip{ width:100%; justify-content:center; } }
-
-    /* V23 - Sub-pestañas de Config */
-    .config-tabs { display:flex; gap:8px; overflow-x:auto; margin-bottom:14px; padding-bottom:2px; }
-    .config-tab { flex:0 0 auto; padding:10px 14px; border-radius:999px; border:1px solid var(--border); background:#f3f4f6; color:#374151; font-weight:800; font-size:13px; cursor:pointer; white-space:nowrap; width:auto; margin-top:0; }
-    .config-tab.active { background:#111827; color:#fff; border-color:#111827; }
-    .config-subpage { display:none; }
-    .config-subpage.active { display:block; }
 
     /* V23 - Próximos mantenimientos en pestaña de predicciones */
     .proximos-title { font-weight:900; margin:16px 0 8px; color:#0f172a; display:flex; align-items:center; gap:8px; }
@@ -687,6 +678,9 @@
         <div class="sigic-header-brand" aria-label="Powered by SIGIC">
           <img id="headerBrandLogo" class="brand-logo" alt="Sistema Integrado de Gestión de Información Crítica" />
           <div class="sigic-powered">Powered by <strong>SIGIC</strong></div>
+          <span class="plan-chip" id="planChip" onclick="irAConfigPlan()">
+            <span id="planChipDias">-- días</span>
+          </span>
         </div>
       </div>
     </div>
@@ -694,6 +688,8 @@
       <button type="button" class="nav-btn top active" data-page="Inicio"><span>🏠</span>Inicio</button>
       <button type="button" class="nav-btn top" data-page="Mantenimiento"><span>🔧</span>Service</button>
       <button type="button" class="nav-btn top" data-page="Autonomia"><span>⛽</span>Consumo</button>
+      <button type="button" class="nav-btn top" data-page="Predicciones"><span>🔮</span>Predic.</button>
+      <button type="button" class="nav-btn top" data-page="Plan"><span>💳</span>Plan</button>
       <button type="button" class="nav-btn top" data-page="Config"><span>⚙️</span>Config.</button>
     </nav>
   </header>
@@ -723,12 +719,6 @@
         </div>
         <p id="estadoActual" class="small" style="color:#cbd5e1;margin-top:10px">Cargá el kilometraje actual para ver el estado.</p>
       </section>
-
-      <div class="plan-chip-bar">
-        <span class="plan-chip" id="planChip" onclick="irAConfigPlan()">
-          <span id="planChipDias">-- días restantes</span>
-        </span>
-      </div>
 
       <section class="card health-dashboard" id="saludMotoCard">
         <div class="health-ring" id="saludRing">
@@ -889,124 +879,110 @@
       </section>
     </section>
 
+    <section id="pagePredicciones" class="page">
+      <section class="card predictions-card" id="prediccionesCard">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+          <h2 style="margin:0;">🔮 Predicciones</h2>
+          <button type="button" id="reiniciarPrediccionBtn" class="secondary" style="width:auto; padding:8px 14px; font-size:13px;">🔄 Reiniciar cálculo</button>
+        </div>
+        <div class="modo-prediccion-tabs">
+          <button type="button" id="modoPrediccionAuto" class="modo-tab active">🤖 Automático</button>
+          <button type="button" id="modoPrediccionManual" class="modo-tab">✍️ Manual</button>
+        </div>
+        <div id="prediccionManualBox" class="mini-card hidden" style="margin-bottom:12px">
+          <label for="kmSemanaManual">Km recorridos esta semana</label>
+          <input type="number" id="kmSemanaManual" min="0" placeholder="Ej: 250" />
+          <button type="button" id="guardarKmSemanaBtn">Guardar</button>
+          <div id="prediccionManualInfo" class="small" style="margin-top:6px; color:#6b7280">Todavía no cargaste ningún dato.</div>
+        </div>
+        <div id="prediccionesContenido" class="small">Cargá al menos dos registros con fecha y kilometraje para calcular predicciones.</div>
+
+        <div class="proximos-title">📅 Próximos services y mantenimientos</div>
+        <div id="proximosMantenimientos" class="proximos-list small">Cargá kilometraje y services para ver el orden de vencimientos.</div>
+      </section>
+    </section>
+
+    <section id="pagePlan" class="page">
+      <section class="card plan-status-card" id="planStatusCard">
+        <div>
+          <div class="plan-name-badge" id="planNombre">Plan: --</div>
+          <div class="plan-countdown" id="planDias">-- <small>días restantes</small></div>
+          <div class="plan-expiry-text" id="planVencimiento">Sin información de vigencia.</div>
+        </div>
+        <div class="plan-message">
+          <h2 id="planTitulo">Estado de la suscripción</h2>
+          <div id="planDetalle" class="small">Sincronizando información del plan...</div>
+          <a id="planWhatsapp" class="whatsapp-plan-btn hidden"
+             href="https://wa.me/5491131856333?text=Hola%2C%20quiero%20habilitar%20mi%20plan%20de%20MotoControl."
+             target="_blank" rel="noopener">💬 Contactar al administrador</a>
+        </div>
+      </section>
+    </section>
+
     <section id="pageConfig" class="page">
-      <nav class="config-tabs" aria-label="Secciones de configuración">
-        <button type="button" class="config-tab active" data-config-tab="Moto">🏍️ Moto</button>
-        <button type="button" class="config-tab" data-config-tab="Cuenta">👤 Cuenta</button>
-        <button type="button" class="config-tab" data-config-tab="Parametros">⚙ Parámetros</button>
-        <button type="button" class="config-tab" data-config-tab="Plan">💳 Plan</button>
-        <button type="button" class="config-tab" data-config-tab="Predicciones">🔮 Predicciones</button>
-      </nav>
-
-      <section id="configMoto" class="config-subpage active">
-        <section class="card">
-          <h2>🏍️ Datos de la moto</h2>
-          <p class="small">Este nombre y foto se muestran en el encabezado y en la pantalla de carga.</p>
-          <label for="motoNombre">Nombre visible de la moto</label>
-          <input type="text" id="motoNombre" placeholder="Ej: La Tornado" />
-          <div class="grid2">
-            <div>
-              <label for="motoMarca">Marca</label>
-              <input type="text" id="motoMarca" placeholder="Ej: Honda" />
-            </div>
-            <div>
-              <label for="motoModelo">Modelo</label>
-              <input type="text" id="motoModelo" placeholder="Ej: XR 190L" />
-            </div>
-            <div>
-              <label for="motoCilindrada">Cilindrada</label>
-              <input type="text" id="motoCilindrada" placeholder="Ej: 190 cc" />
-            </div>
-          </div>
-          <label for="motoFotoInput">Foto de la moto</label>
-          <input type="file" id="motoFotoInput" accept="image/*" />
-          <div id="motoFotoPreviewWrap" class="hidden" style="margin-top:10px">
-            <img id="motoFotoPreview" alt="Vista previa" />
-          </div>
-          <button type="button" class="secondary" id="guardarMoto" style="margin-top:12px">Guardar datos de la moto</button>
-          <div id="motoMsg" class="small" style="margin-top:8px"></div>
-        </section>
-      </section>
-
-      <section id="configCuenta" class="config-subpage">
-        <section class="card">
-          <div class="user-box">
-            <div>
-              <h2>👤 Mi cuenta</h2>
-              <div id="cuentaNombre" class="user-badge">Sesión activa</div>
-              <p id="cuentaEmail" class="small" style="margin:8px 0 0">DNI conectado.</p>
-              <div id="cuentaPlan" class="account-line">Acceso vigente.</div>
-            </div>
-            <div class="account-actions"><button type="button" class="secondary" id="agregarMotoConfig">Agregar moto</button><button type="button" class="secondary" id="cambiarClaveBtn">Cambiar contraseña</button><button type="button" class="danger" id="cerrarSesion">Cerrar sesión</button></div>
-          </div>
-        </section>
-      </section>
-
-      <section id="configParametros" class="config-subpage">
-        <section class="card">
-          <h2>⚙ Parámetros de aviso</h2>
-          <p class="small">Modificá los vencimientos según el manual de tu moto o tu criterio de uso. Freno se controla por kilómetros y batería por meses.</p>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Mantenimiento</th>
-                  <th>Aviso desde</th>
-                  <th>Vencimiento</th>
-                </tr>
-              </thead>
-              <tbody id="tablaParametros"></tbody>
-            </table>
-          </div>
-          <div class="grid2" style="margin-top:12px">
-            <div>
-              <label for="capacidadTanque">Capacidad del tanque de combustible</label>
-              <input type="number" id="capacidadTanque" min="0" step="0.1" placeholder="Ej: 13.5" />
-              <p class="small">Se carga una sola vez. Con este dato calcula la autonomía estimada automáticamente.</p>
-            </div>
-          </div>
-          <button type="button" class="secondary" id="guardarParametros">Guardar parámetros</button>
-        </section>
-      </section>
-
-      <section id="configPlan" class="config-subpage">
-        <section class="card plan-status-card" id="planStatusCard">
+      <section class="card">
+        <h2>🏍️ Datos de la moto</h2>
+        <p class="small">Este nombre y foto se muestran en el encabezado y en la pantalla de carga.</p>
+        <label for="motoNombre">Nombre visible de la moto</label>
+        <input type="text" id="motoNombre" placeholder="Ej: La Tornado" />
+        <div class="grid2">
           <div>
-            <div class="plan-name-badge" id="planNombre">Plan: --</div>
-            <div class="plan-countdown" id="planDias">-- <small>días restantes</small></div>
-            <div class="plan-expiry-text" id="planVencimiento">Sin información de vigencia.</div>
+            <label for="motoMarca">Marca</label>
+            <input type="text" id="motoMarca" placeholder="Ej: Honda" />
           </div>
-          <div class="plan-message">
-            <h2 id="planTitulo">Estado de la suscripción</h2>
-            <div id="planDetalle" class="small">Sincronizando información del plan...</div>
-            <a id="planWhatsapp" class="whatsapp-plan-btn hidden"
-               href="https://wa.me/5491131856333?text=Hola%2C%20quiero%20habilitar%20mi%20plan%20de%20MotoControl."
-               target="_blank" rel="noopener">💬 Contactar al administrador</a>
+          <div>
+            <label for="motoModelo">Modelo</label>
+            <input type="text" id="motoModelo" placeholder="Ej: XR 190L" />
           </div>
-        </section>
+          <div>
+            <label for="motoCilindrada">Cilindrada</label>
+            <input type="text" id="motoCilindrada" placeholder="Ej: 190 cc" />
+          </div>
+        </div>
+        <label for="motoFotoInput">Foto de la moto</label>
+        <input type="file" id="motoFotoInput" accept="image/*" />
+        <div id="motoFotoPreviewWrap" class="hidden" style="margin-top:10px">
+          <img id="motoFotoPreview" alt="Vista previa" />
+        </div>
+        <button type="button" class="secondary" id="guardarMoto" style="margin-top:12px">Guardar datos de la moto</button>
+        <div id="motoMsg" class="small" style="margin-top:8px"></div>
       </section>
 
-      <section id="configPredicciones" class="config-subpage">
-        <section class="card predictions-card" id="prediccionesCard">
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
-            <h2 style="margin:0;">🔮 Predicciones</h2>
-            <button type="button" id="reiniciarPrediccionBtn" class="secondary" style="width:auto; padding:8px 14px; font-size:13px;">🔄 Reiniciar cálculo</button>
+      <section class="card">
+        <div class="user-box">
+          <div>
+            <h2>👤 Mi cuenta</h2>
+            <div id="cuentaNombre" class="user-badge">Sesión activa</div>
+            <p id="cuentaEmail" class="small" style="margin:8px 0 0">DNI conectado.</p>
+            <div id="cuentaPlan" class="account-line">Acceso vigente.</div>
           </div>
-          <div class="modo-prediccion-tabs">
-            <button type="button" id="modoPrediccionAuto" class="modo-tab active">🤖 Automático</button>
-            <button type="button" id="modoPrediccionManual" class="modo-tab">✍️ Manual</button>
-          </div>
-          <div id="prediccionManualBox" class="mini-card hidden" style="margin-bottom:12px">
-            <label for="kmSemanaManual">Km recorridos esta semana</label>
-            <input type="number" id="kmSemanaManual" min="0" placeholder="Ej: 250" />
-            <button type="button" id="guardarKmSemanaBtn">Guardar</button>
-            <div id="prediccionManualInfo" class="small" style="margin-top:6px; color:#6b7280">Todavía no cargaste ningún dato.</div>
-          </div>
-          <div id="prediccionesContenido" class="small">Cargá al menos dos registros con fecha y kilometraje para calcular predicciones.</div>
+          <div class="account-actions"><button type="button" class="secondary" id="agregarMotoConfig">Agregar moto</button><button type="button" class="secondary" id="cambiarClaveBtn">Cambiar contraseña</button><button type="button" class="danger" id="cerrarSesion">Cerrar sesión</button></div>
+        </div>
+      </section>
 
-          <div class="proximos-title">📅 Próximos services y mantenimientos</div>
-          <div id="proximosMantenimientos" class="proximos-list small">Cargá kilometraje y services para ver el orden de vencimientos.</div>
-        </section>
+      <section class="card">
+        <h2>⚙ Parámetros de aviso</h2>
+        <p class="small">Modificá los vencimientos según el manual de tu moto o tu criterio de uso. Freno se controla por kilómetros y batería por meses.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Mantenimiento</th>
+                <th>Aviso desde</th>
+                <th>Vencimiento</th>
+              </tr>
+            </thead>
+            <tbody id="tablaParametros"></tbody>
+          </table>
+        </div>
+        <div class="grid2" style="margin-top:12px">
+          <div>
+            <label for="capacidadTanque">Capacidad del tanque de combustible</label>
+            <input type="number" id="capacidadTanque" min="0" step="0.1" placeholder="Ej: 13.5" />
+            <p class="small">Se carga una sola vez. Con este dato calcula la autonomía estimada automáticamente.</p>
+          </div>
+        </div>
+        <button type="button" class="secondary" id="guardarParametros">Guardar parámetros</button>
       </section>
     </section>
   </main>
@@ -1015,8 +991,11 @@
     <button type="button" class="nav-btn active" data-page="Inicio"><span>🏠</span>Inicio</button>
     <button type="button" class="nav-btn" data-page="Mantenimiento"><span>🔧</span>Service</button>
     <button type="button" class="nav-btn" data-page="Autonomia"><span>⛽</span>Consumo</button>
+    <button type="button" class="nav-btn" data-page="Predicciones"><span>🔮</span>Predic.</button>
+    <button type="button" class="nav-btn" data-page="Plan"><span>💳</span>Plan</button>
     <button type="button" class="nav-btn" data-page="Config"><span>⚙️</span>Config.</button>
   </nav>
+
 
 
   <div id="guideModal" class="guide-modal" aria-hidden="true" role="dialog" aria-modal="true">
@@ -1318,8 +1297,8 @@
       if (vencido) chip.classList.add('bad');
       else if (dias !== null && dias <= 3) chip.classList.add('warn');
       const chipTxt = dias === null
-        ? 'Plan sin vigencia registrada'
-        : (vencido ? 'Plan vencido' : `${dias} ${dias === 1 ? 'día restante' : 'días restantes'}`);
+        ? 'Sin vigencia'
+        : (vencido ? 'Plan vencido' : `${dias} ${dias === 1 ? 'día' : 'días'}`);
       $('planChipDias').textContent = chipTxt;
     }
   }
@@ -1389,7 +1368,6 @@
     $('splashScreen')?.classList.remove('show');
     pintarCuenta();
     cambiarPagina('Inicio');
-    cambiarConfigTab('Moto');
   }
 
 
@@ -1871,20 +1849,8 @@
     btn.addEventListener('click', () => cambiarPagina(btn.dataset.page));
   });
 
-  function cambiarConfigTab(nombre) {
-    document.querySelectorAll('.config-subpage').forEach(p => p.classList.remove('active'));
-    $('config' + nombre)?.classList.add('active');
-    document.querySelectorAll('.config-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.configTab === nombre));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  document.querySelectorAll('.config-tab').forEach(btn => {
-    btn.addEventListener('click', () => cambiarConfigTab(btn.dataset.configTab));
-  });
-
   function irAConfigPlan() {
-    cambiarPagina('Config');
-    cambiarConfigTab('Plan');
+    cambiarPagina('Plan');
   }
 
   $('tipo').addEventListener('change', () => {
